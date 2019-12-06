@@ -1,3 +1,4 @@
+awesome-python3-webapp/*
 *.pyc
 .gitignore
 *.so
