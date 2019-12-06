@@ -1,0 +1,5 @@
+*.pyc
+.gitignore
+*.so
+*.egg
+*.egg-info
