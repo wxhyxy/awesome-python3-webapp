@@ -97,12 +97,11 @@ class FloatField(Field):
 class TextField(Field):
 
 	def __init__(self, name = None, default=None):
-		
+		super.__init__(self, 'text', False, default)
 
-
-
-
-
+class  MidelMetaclass(type):
+	
+	def __new__(cls)
 
 
 
