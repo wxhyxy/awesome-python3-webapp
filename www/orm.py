@@ -25,7 +25,7 @@ async def create_pool(loop, **kw):
 async def select(sql, args, size=None):
 	log(sql, args)
 	global __pool
-	async with __pool.get as conn:
+	async with __pool.get() as conn:
 		await with conn.cursor(aiomysql.DictCursor) as cur:
 			await cur.execute(sql.replace('?', '%s'), args or ())
 			if size: # 如果传入size，获取最多指定数量的记录否则返回所有的数据
