@@ -1,6 +1,9 @@
 import aiomysql
 import asyncio
 import logging
+import sys
+
+sys.setrecursionlimit(100000)
 
 
 async def create_pool(loop, **kw):
@@ -26,7 +29,7 @@ async def select(sql, args, size=None):
 	log(sql, args)
 	global __pool
 	async with __pool.get() as conn:
-		await with conn.cursor(aiomysql.DictCursor) as cur:
+		async with conn.cursor(aiomysql.DictCursor) as cur:
 			await cur.execute(sql.replace('?', '%s'), args or ())
 			if size: # 如果传入size，获取最多指定数量的记录否则返回所有的数据
 				rs = await cur.fetchmany(size)
@@ -87,17 +90,17 @@ class BooleanField(Field):
 class IntegerField(Field):
 
 	def __init__(self, name = None, primary_key=False, default=0):
-		super.__init__(self, 'bigint', primary_key, default)
+		super().__init__(self, 'bigint', primary_key, default)
 
 class FloatField(Field):
 
 	def __init__(self, name=None, primary_key=False, default=0.0):
-		super.__init__(self, 'real',primary_key, default)
+		super().__init__(self, 'real', primary_key, default)
 
 class TextField(Field):
 
 	def __init__(self, name = None, default=None):
-		super.__init__(self, 'text', False, default)
+		super().__init__(self, 'text', False, default)
 
 class  ModelMetaclass(type):
 	
@@ -107,9 +110,9 @@ class  ModelMetaclass(type):
 			return type.__new__(cls, name, bases, attrs)
 		# 获取table名称
 		tableName = attrs.get('__table__', None) or name
-		logging.info('found model:%s(table:%s)'% (name ,tableName)
+		logging.info('found model:%s(table:%s)'% (name ,tableName))
 		# 创建字典，列表， 主键
-		mappings = dict()
+		mapping = dict()
 		fields = []
 		primaryKey = None
 		for k, v in attrs.items():
@@ -118,16 +121,16 @@ class  ModelMetaclass(type):
 				mapping[k] = v
 				if v.primary_key:
 					if primaryKey:
-						raise RuntimeError('Duplicate primary key for field: %s',%k)
+						raise RuntimeError('Duplicate primary key for field: %s'% k)
 					primaryKey = k
 				else:
-					field.append(k)
+					fields.append(k)
 
 		if not primaryKey:
 			raise RuntimeError('primary key not found')
 		for k in mapping.keys():
 			attrs.pop(k)
-		escaped_fields = list(map(lambda:f:'%s'%f, fields))
+		escaped_fields = list(map(lambda f: '`%s`' % f, fields))
 		attrs['__mappings__'] = mappings # 保存属性和列的映射关系
 		attrs['__table__'] = tableName # 表名
 		attrs['__primary_key__'] = primaryKey # 主键
@@ -136,7 +139,7 @@ class  ModelMetaclass(type):
 		attrs['__select__'] = 'select `%s`, %s from `%s`'%(primaryKey, ','.join(escaped_fields), tableName)
 		attrs['__insert__'] = 'insert into `%s` (%s, `%s`) values (%s)'% (tableName, ','.join(escaped_fields), primaryKey, craete_args_string(len(escaped_fields)+1))
 		attrs['__delete__'] = 'delete from `%s` where `%s`=?' %(tableName, primaryKey)
-		attrs['__update__'] = 'update `%s` set %s where `%s`=?'%(tableName, ','.join(map(lambda:f : '%s=?'%(mappings.get(f).name or f), fields)), primaryKey)
+		attrs['__update__'] = 'update `%s` set %s where `%s`=?'%(tableName, ','.join(map(lambda f : '%s=?'%(mappings.get(f).name or f), fields)), primaryKey)
 		return type.__new__(cls, name, bases, attrs)
 
 class Model(dict, metaclass=ModelMetaclass):
@@ -154,7 +157,7 @@ class Model(dict, metaclass=ModelMetaclass):
 		self[key] = value
 
 	def getValue(self, key):
-		reutn getattr(self, key, None)
+		return getattr(self, key, None)
 
 	def getValueOrDefault(self, key):
 		value = getattr(self, key, None)
