@@ -1,19 +1,22 @@
 # 测试连接数据库
 
 import orm
-from models import *
+from models import User 
 import aiomysql, asyncio
+print(1)
 
 
-def test(loop):
-	print('start...')
-	yield from orm.create_pool(loop, user='root',password='mysql',db='awesome')
+async def test(loop):
+		print('start...')
+		await orm.create_pool(loop, user='root',password='mysql',db='awesome')
 
-	u = User(name = 'Test', password = 'wangrui', email = 'w.3097652.rt@163.com', image = 'about:blank')
+		u = User(name = 'Test', email = 'w.3097652.rt@163.com', passwd = 'wangrui', image = 'about:blank')
 
-	yield from u.save()
-	print('baocun')
+		await u.save()
+		print('baocun')
 
-
-print(123)
-test()
+if __name__ == '__main__':
+	loop = asyncio.get_event_loop()
+	loop.run_until_complete(test(loop))
+	print(123)
+	loop.close()
