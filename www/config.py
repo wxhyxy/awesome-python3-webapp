@@ -35,7 +35,6 @@ def toDice(d):
 
 	for k,v in d.items():
 		D[k] = toDice(v) if isinstance(v, dict) else v
-
 	return D
 
 configs = config_default.configs

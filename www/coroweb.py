@@ -6,14 +6,16 @@ from urllib import parse
 
 from aiohttp import web
 
+from apis import APIError
+
 def get(path):
 
 	def decorator(func):
-		@functools.wrapper
+		@functools.wraps(func)
 		def wrapper(*args, **kw):
 			return func(*args, **kw)
-		wapper.__method__ = 'GET'
-		wapper.__route__ = 'path'
+		wrapper.__method__ = 'GET'
+		wrapper.__route__ = path
 		return wrapper
 	return decorator
 
@@ -64,8 +66,8 @@ def has_request_arg(fn):
 		if name == 'request':
 			found = True
 			continue
-	if found and (param.kind != inspect.Parameter.VAR_POSITIONAL and param.kind != inspect.Parameter.KEYWORD_ONLY and param.kind != inspect.Parameter.VAR_KEYWORD):
-		raise ValueError('request parameter must be the last name parameter in function:%s%s'%(fn.__name__, str(sig)))
+		if found and (param.kind != inspect.Parameter.VAR_POSITIONAL and param.kind != inspect.Parameter.KEYWORD_ONLY and param.kind != inspect.Parameter.VAR_KEYWORD):
+			raise ValueError('request parameter must be the last name parameter in function:%s%s'%(fn.__name__, str(sig)))
 	return found
 
 
@@ -127,7 +129,7 @@ class RequestHandler(object):
 					return web.HTTPBadRequest('Missing argument:%s' % name)
 		logging.info('call with args:%s'% str(kw))
 		try:
-			r = await self.func(**kw)
+			r = await self._func(**kw)
 			return r
 		except APIError as e:
 			return dict(error=e.error, date = e.date, message = e.message)
@@ -146,12 +148,12 @@ def add_route(app, fn):
 		raise ValueError('@get or @post not defined in %s' % str(fn))
 	if not asyncio.iscoroutinefunction(fn) and not inspect.isgeneratorfunction(fn):
 		fn = asyncio.coroutine(fn)
-	logging.info('add route %s %s => %s(%s)'% (method, fn.__name__, ','.join(inspect.signature(fn).parameters.keys())))
-	app.route.add_route(method, path, RequestHandler(app, fn))
+	logging.info('add route %s %s => %s(%s)'% (method, path, fn.__name__, ','.join(inspect.signature(fn).parameters.keys())))
+	app.router.add_route(method, path, RequestHandler(app, fn))
 
 def add_routes(app, module_name):
 	n = module_name.rfind('.')
-	if n == '-1':
+	if n == (-1):
 		mod = __import__(module_name, globals(), locals())
 	else:
 		name = module_name[n+1:]
