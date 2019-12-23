@@ -70,6 +70,7 @@ async def response_factory(app, handler):
 			template = r.get('__template__')
 			if template is None:
 				resp = web.Response(body=json.dumps(r, ensure_ascii=False, default=lambda o: o.__dict__).encode('utf-8'))
+				resp.content_type = 'text/html;charset=utf-8'
 				return resp
 			else:
 				resp = web.Response(body = app['__templating__'].get_template(template).render(**r).encode('utf-8'))
@@ -108,7 +109,7 @@ async def init(loop):
 	add_routes(app, 'handlers')
 	add_static(app)
 	srv = await loop.create_server(app.make_handler(), '192.168.9.16', 9000)
-	logging.info('server started at http:127.0.0.1:9000')
+	logging.info('server started at http:192.168.9.16:9000')
 	return srv
 
 loop = asyncio.get_event_loop()

@@ -9,7 +9,6 @@ from aiohttp import web
 from apis import APIError
 
 def get(path):
-
 	def decorator(func):
 		@functools.wraps(func)
 		def wrapper(*args, **kw):
@@ -43,7 +42,7 @@ def get_name_kw_args(fn):
 	for name, param in params.items():
 		if param.kind == inspect.Parameter.KEYWORD_ONLY:
 			args.append(name)
-	return tuple(name)
+	return tuple(args)
 
 
 def has_named_kw_args(fn):

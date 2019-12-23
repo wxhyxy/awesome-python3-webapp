@@ -4,8 +4,6 @@ create database awesome;
 
 use awesome;
 
-
-
 create table users (
     `id` varchar(50) not null,
     `email` varchar(50) not null,
