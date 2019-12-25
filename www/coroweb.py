@@ -20,12 +20,12 @@ def get(path):
 
 def post(path):
 	def decorator(func):
-		@functools.wrapper
+		@functools.wraps(func)
 		def wrapper(*args, **kw):
 			return func(*args, **kw)
-		wapper.__method__ = 'POST'
-		wapper.__route__ = path
-		return wapper
+		wrapper.__method__ = 'POST'
+		wrapper.__route__ = path
+		return wrapper
 	return decorator
 
 def get_required_kw_args(fn):
@@ -82,56 +82,55 @@ class RequestHandler(object):
 		self._required_kw_args = get_required_kw_args(fn)
 
 	async def __call__(self, request):
-		kw = None
-		if self._has_var_kw_arg or self._has_named_kw_args or self._required_kw_args:
-			if request.method == 'POST':
-				if not request.content_type:
-					return web.HTTPBadRequest('Missing Cpntent-Type.')
-				ct = request.content_type.lower()
-				if ct.startswith('application/json'):
-					params = await request.json()
-					if not isinstance(params, str):
-						return web.HTTPBadRequest('JOSN body must be object.')
-					kw = params
-				elif ct.startswith('application/x-www-form-urlencode') or ct.startswith('multipart/form-data'):
-					params = await request.post()
-					kw = dict(**params)
-				else:
-					return web.HTTPBadRequest('Unsupported content_type:%s'% request.content_type)
-			if request.method == 'GET':
-				qs = request.query_string
-				if qs:
-					kw = dict()
-					for k, v in parse.parse_qs(qs, True).items():
-						kw[k] = v[0]
+			kw = None
+			if self._has_var_kw_arg or self._has_named_kw_args or self._required_kw_args:
+				if request.method == 'POST':
+					if not request.content_type:
+						return web.HTTPBadRequest('Missing Cpntent-Type.')
+					ct = request.content_type.lower()
+					if ct.startswith('application/json'):
+						params = await request.json()
+						if not isinstance(params, dict):
+							return web.HTTPBadRequest('JOSN body must be object.')
+						kw = params
+					elif ct.startswith('application/x-www-form-urlencode') or ct.startswith('multipart/form-data'):
+						params = await request.post()
+						kw = dict(**params)
+					else:
+						return web.HTTPBadRequest('Unsupported content_type:%s'% request.content_type)
+				if request.method == 'GET':
+					qs = request.query_string
+					if qs:
+						kw = dict()
+						for k, v in parse.parse_qs(qs, True).items():
+							kw[k] = v[0]
 
-		if kw is None:
-			kw = dict(**request.match_info)
-		else:
-			if not self._has_var_kw_arg and self._named_kw_args:
-				copy = dict()
-				for name in self._named_kw_args:
-					if name in kw:
-							copy[name] = kw[name]
-					kw = copy
-
-			for k,v in request.match_info.items():
-				if k in kw:
-					logging.warning('Duplicate arg name in named arg and kw args:%s'% k)
-
-		if self._has_request_arg:
-			kw['request'] = request
-
-		if self._required_kw_args:
-			for name in self._required_kw_args:
-				if not name in kw:
-					return web.HTTPBadRequest('Missing argument:%s' % name)
-		logging.info('call with args:%s'% str(kw))
-		try:
-			r = await self._func(**kw)
-			return r
-		except APIError as e:
-			return dict(error=e.error, date = e.date, message = e.message)
+			if kw is None:
+				kw = dict(**request.match_info)
+			else:
+				if not self._has_var_kw_arg and self._named_kw_args:
+					copy = dict()
+					for name in self._named_kw_args:
+						if name in kw:
+								copy[name] = kw[name]
+						kw = copy
+				for k,v in request.match_info.items():
+					if k in kw:
+						logging.warning('Duplicate arg name in named arg and kw args:%s'% k)
+					kw[k] = v
+			if self._has_request_arg:
+				kw['request'] = request
+			print(123)
+			if self._required_kw_args:
+				for name in self._required_kw_args:
+					if not name in kw:
+						return web.HTTPBadRequest('Missing argument:%s' % name)
+			logging.info('call with args:%s'% str(kw))
+			try:
+				r = await self._func(**kw)
+				return r
+			except APIError as e:
+				return dict(error=e.error, date = e.date, message = e.message)
 
 
 def add_static(app):

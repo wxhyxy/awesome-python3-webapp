@@ -1,6 +1,7 @@
 # 测试连接数据库
 
-import orm
+import orm, re, hashlib, json
+from aiohttp import web
 from models import * 
 import aiomysql, asyncio
 from coroweb import get, post
@@ -37,3 +38,37 @@ async def api_get_users():
 		for u in users:
 			u.passwd = '******'
 		return dict(users = users)
+
+
+_RE_EMAIL = re.compile('^[a-z0-9\.\-\_]+\@[a-z0-9\-\_]+(\.[a-z0-9\-\_]+){1,4}$')
+_RE_SHA1 = re.compile('^[0-9a-z]{40}$')
+
+@post('/api/users')
+async def aip_register_users(*, name, password, email):
+		if not name or not name.strip():
+			raise APIValueError('name')
+		if not email or _RE_EMAIL.match(email):
+			raise APIValueError('email')
+		if not password or _RE_SHA1.match(password):
+			raise APIValueError('password')
+		users = await User.findAll('email=?',[email])
+		if len(users) > 0:
+			raise APIError('register failed', 'email', 'email is already in use')
+		uid = next_id()
+		sha1_passwd = '%s:%s'%(uid, password)
+		users = User(id=uid, email=email, passwd=hashlib.sha1(sha1_passwd.encode('utf-8')).hexdigest(),
+			image = 'http://www.gravatar.com/avatar/%s?d=mm&s=120'% hashlib.md5(email.encode('utf-8')).hexdigest()
+			)
+		await users.save()
+		r = web.Response()
+		r.set_cookie(COOKIE_NAME, user2cookie(users, 86400), max_age = 86400, httponly = True)
+		user.passwd = '******'
+		r.content_type = 'application/json'
+		r.body = json.dumps(user, ensure_ascii=False).encode('utf-8')
+		return r
+
+@get('/register')
+async def register():
+	return {
+		'__template__' : 'register.html'
+	}
