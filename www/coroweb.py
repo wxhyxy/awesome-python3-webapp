@@ -104,33 +104,31 @@ class RequestHandler(object):
 						kw = dict()
 						for k, v in parse.parse_qs(qs, True).items():
 							kw[k] = v[0]
-
 			if kw is None:
 				kw = dict(**request.match_info)
 			else:
 				if not self._has_var_kw_arg and self._named_kw_args:
 					copy = dict()
-					for name in self._named_kw_args:
-						if name in kw:
-								copy[name] = kw[name]
-						kw = copy
+					for n in self._named_kw_args:
+						if n in kw:
+							copy[n] = kw[n]
+					kw = copy
 				for k,v in request.match_info.items():
 					if k in kw:
 						logging.warning('Duplicate arg name in named arg and kw args:%s'% k)
 					kw[k] = v
 			if self._has_request_arg:
 				kw['request'] = request
-			print(123)
 			if self._required_kw_args:
 				for name in self._required_kw_args:
 					if not name in kw:
-						return web.HTTPBadRequest('Missing argument:%s' % name)
+						return web.HTTPBadRequest('Missing argument:%s'% name)
 			logging.info('call with args:%s'% str(kw))
 			try:
 				r = await self._func(**kw)
 				return r
 			except APIError as e:
-				return dict(error=e.error, date = e.date, message = e.message)
+				return dict(error=e.error, date = e.data, message = e.message)
 
 
 def add_static(app):

@@ -45,7 +45,7 @@ async def execute(sql, args, autocommit=True):
 		if not autocommit:
 			await conn.begin()
 		try:
-			async with conn.cursor(aiomysql.DictCursor) as cur:
+			async with conn.cursor() as cur:
 				await cur.execute(sql.replace('?', '%s'), args)
 				affected = cur.rowcount
 			if not autocommit:

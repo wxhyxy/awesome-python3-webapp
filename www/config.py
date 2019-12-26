@@ -28,16 +28,15 @@ def merge(defaults, override):
 				r[k] = override[k]
 		else:
 			r[k] = v
+	return r
 
+configs = config_default.configs
 
 def toDice(d):
 	D = dict()
-
 	for k,v in d.items():
 		D[k] = toDice(v) if isinstance(v, dict) else v
 	return D
-
-configs = config_default.configs
 
 try:
 	import config_override
