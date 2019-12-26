@@ -18,6 +18,7 @@ from config import configs
 
 COOKIE_NAME = 'awesession'
 _COOKIE_KEY = configs.get('session').get('secret')
+# 加密cookie
 def user2cookie(user, max_age):
 	# 构建cookie字符串，sha1形式
 	expires = str(int(time.time()+max_age))
@@ -26,6 +27,66 @@ def user2cookie(user, max_age):
 	return '-'.join(l)
 
 # async def cookie2user(cookie_str):
+
+@post('/api/authenticate')
+async def authenticate(*, email, passwd):
+		if not email:
+			raise APIValueError('email', 'Invalid email.')
+		if not passwd:
+			raise APIValueError('passwd', 'Invalid passwd.')
+		users = await User.findAll('email=?', [email])
+		if len(users) == 0:
+			raise APIValueError('email', 'Email not exist')
+		user = users[0]
+		sha1 = hashlib.sha1()
+		sha1.update(user.id.encode('utf-8'))
+		sha1.update(b':')
+		sha1.update(passwd.encode('utf-8'))
+		if user.passwd != sha1.hexdigest():
+			raise APIValueError('passwd', 'Invalid password')
+		r = web.Response()
+		r.set_cookie(COOKIE_NAME, user2cookie(user, 86400), max_age=86400, httponly=True)
+		user.passwd = '******'
+		r.content_type = 'application/json'
+		r.body = json.dumps(user, ensure_ascii=False).encode('utf-8')
+		return r 
+
+async def auth_factory(app, handler):
+	async def auth(request):
+		logging.info('check user:%s %s'% (request.method, request.path))
+		request.__user__ = None
+		cookie_str = request.cookies.get(COOKIE_NAME)
+		if cookie_str:
+			user = await cookie2user(cookie_str)
+			if user:
+				logging.info('set current user:%s'% user.email)
+				request.__user__ = user
+		return (await handler(request))
+	return auth
+
+# 解码cookie
+async def cookie2user(cookie_str):
+	if not cookie_str:
+		return None
+	try:
+		l = cookie_str.split('-')
+		if len(l) != 3:
+			return None
+		uid, expires, sha1 = l
+		if int(expires) < time.time():
+			return None
+		user = await User.find(uid)
+		if user is None:
+			return None	
+		s = '%s-%s-%s-%s'%(uid, user.passwd, expires, _COOKIE_KEY)
+		if sha1 != hashlib.sha1(s.encode('utf-8')).hexdigest():
+			logging.info('invalid sha1')
+			return None
+		user.passwd = '*******'
+		return user
+	except Exception as e:
+		logging.exception(e)
+		return None
 
 
 @get('/')
@@ -61,6 +122,12 @@ async def register():
 	}
 
 
+@get('/signin')
+async def signin():
+	return {
+		'__template__' :'siginin.html'
+	}
+
 _RE_EMAIL = re.compile('^[a-z0-9\.\-\_]+\@[a-z0-9\-\_]+(\.[a-z0-9\-\_]+){1,4}$')
 _RE_SHA1 = re.compile('^[0-9a-z]{40}$')
 
@@ -88,3 +155,17 @@ async def aip_register_users(*, name, email, passwd):
 		r.body = json.dumps(users, ensure_ascii=False).encode('utf-8')
 		return r
 
+
+@post('/api/blogs')
+async def api_create_blog(request, *, name, summary, content):
+		check_admin(request)
+		if not name or not name.strip():
+			raise APIValueError('name', 'name cannot be empty')
+		if not summary or not summary.strip():
+			raise APIValueError('summary', 'summary cannot be empty')
+		if not content or not content.strip():
+			raise APIValueError('content', 'content cannot be empty')
+		blogs = Blog(user_id = request.__user__.id, user_name = request.__user__.name,
+			user_image = request.__user__.image, name = name.strip(), summary = summary.strip(), content = content.strip())
+		await blogs.save()
+		return blogs
