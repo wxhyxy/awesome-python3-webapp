@@ -18,6 +18,10 @@ from config import configs
 
 COOKIE_NAME = 'awesession'
 _COOKIE_KEY = configs.get('session').get('secret')
+
+def check_admin(request):
+	if request.__user__ is None or not request.__user__.admin:
+		raise APIPermissionErroor()
 # 加密cookie
 def user2cookie(user, max_age):
 	# 构建cookie字符串，sha1形式
@@ -51,18 +55,14 @@ async def authenticate(*, email, passwd):
 		r.body = json.dumps(user, ensure_ascii=False).encode('utf-8')
 		return r 
 
-async def auth_factory(app, handler):
-	async def auth(request):
-		logging.info('check user:%s %s'% (request.method, request.path))
-		request.__user__ = None
-		cookie_str = request.cookies.get(COOKIE_NAME)
-		if cookie_str:
-			user = await cookie2user(cookie_str)
-			if user:
-				logging.info('set current user:%s'% user.email)
-				request.__user__ = user
-		return (await handler(request))
-	return auth
+
+@get('/signout')
+def signout(request):
+	referer = request.headers.get('Referer')
+	r = web.HTTPFound(referer or '/')
+	r.set_cookie(COOKIE_NAME, '-deleted-', max_age=0, httponly=True)
+	logging.info('user signed out')
+	return r
 
 # 解码cookie
 async def cookie2user(cookie_str):
@@ -169,3 +169,11 @@ async def api_create_blog(request, *, name, summary, content):
 			user_image = request.__user__.image, name = name.strip(), summary = summary.strip(), content = content.strip())
 		await blogs.save()
 		return blogs
+
+@get('/api/blogs/create')
+def manage_create_blog():
+	return {
+	'__template__':'manage_blog_edit.html',
+	'id':'',
+	'action':'/api/blogs'
+	}

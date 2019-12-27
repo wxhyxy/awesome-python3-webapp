@@ -4,6 +4,7 @@
 	{% block meta %} {% endblock %}
 	<title>{% block title %} {% endblock %}-Awesome Python Webapp</title>
 	<link rel="stylesheet" type="text/css" href="/static/css/uikit.min.css">
+	<link rel="stylesheet" type="text/css" href="/static/css/uikit.gradient.min.css">
 	<link rel="stylesheet" type="text/css" href="/static/css/uikit.almost-flat.min.css">
 	<link rel="stylesheet" type="text/css" href="/static/css/awesome.css">
 	<script src="/static/js/jquery.min.js"></script>
@@ -11,6 +12,7 @@
 	<script src="/static/js/uikit.min.js"></script>
 	<script src="/static/js/awesome.js"></script>
 	<script src="/static/js/vue.min.js"></script>
+	<script src="/static/js/sticky.min.js"></script>
 	{% block beforehead %} {% endblock %}
 </head>
 <body>
@@ -22,11 +24,11 @@
 				<li><a href="#" target="_blank"><i class="uk-icon-book">教程</i></a></li>
 				<li><a href="#" target="_blank"><i class="uk-icon-code">源码</i></a></li>
 			</ul>
-			<div class="uk-nacbar-filp">
+			<div class="uk-navbar-flip">
 				<ul class="uk-navbar-nav">
-					{% if user %}
+					{% if __user__ %}
 					<li class="uk-parent" data-uk-dropdown>
-						<a href="#0"><i class="uk-icon-user"></i>{{ user.name }}</a>
+						<a href="#0"><i class="uk-icon-user"></i>{{ __user__.name }}</a>
 						<div class="uk-dropdown uk-dropdown-navbar">
 							<ul class="uk-nav uk-nav-navbar">
 								<li><a href="/signout"><i class="uk-icon-sign-out"></i>登出</a></li>

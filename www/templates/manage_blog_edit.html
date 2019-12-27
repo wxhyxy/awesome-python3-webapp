@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% blog title %} 编辑日志 {% endblog %}
+{% block title %} 编辑日志 {% endblock %}
 
 {% block beforehead %}
 <script >
@@ -11,8 +11,9 @@ function initVM(blog) {
 		el:'#vm',
 		data:blog,
 		methods:{
-			sumbit: function(event){
-				var $form = ('#vm').find('form')
+			submit: function(event){
+				event.preventDefault();
+				var $form = $('#vm').find('form')
 				$form.postJSON(action, this.$data, function(err,r){
 					if (err){
 						$form.showFormError(err)
@@ -59,6 +60,41 @@ $(function(){
 			<li><a href="/manage/comments">用户</a></li>
 		</ul>
 	</div>
+</div>
+
+<div id='error' class="uk-width-1-1"></div>
+<div id='loading' class="uk-width-1-1 uk-text-center">
+	<span><i class="uk-icon-spinner uk-icon-medium uk-icon-spin"></i>正在加载</span>
+</div>
+
+<div id="vm" class="uk-width-2-3">
+	<form v-om='sumbit: sumbit' class="uk-form uk-form-stacked">
+		<div class="uk-alert uk-alert-danger uk-hidden"></div>
+		<div class="uk-form-row">
+			<label class="uk-form-controls">标题:</label>
+			<div class="uk-form-controls">
+				<input type="text" name="name" v-model='name' placeholder="标题" class="uk-width-1-1">
+			</div>
+		</div>
+		<div class="uk-form-row">
+			<label class="uk-form-label">摘要:</label>
+			<div class="uk-form-controls">
+				<textarea v-model='summary' rows="4" name="summary" placeholder="摘要" class="uk-width-1-1" style="resize:none">	</textarea>
+			</div>
+		</div>
+		<div class="uk-form-row">
+			<label class="uk-form-row">内容:</label>
+			<div class="uk-form-controls">
+				<textarea v-model='content' name='content' rows="16" placeholder="内容" class="uk-width-1-1" style="resize:none;"></textarea>
+			</div>
+		</div>
+		<div>
+			<div class="uk-form-row">
+				<button type="sumbit" class="uk-button uk-button-primary"><i class="uk-icon-save"></i>保存</button>
+				<a href="/manage/blogs" class="uk-button"><i class="uk-icon-times"></i>取消</a>
+			</div>
+		</div>
+	</form>
 </div>
 
 {%endblock%}
