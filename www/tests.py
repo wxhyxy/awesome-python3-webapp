@@ -165,10 +165,10 @@ async def api_create_blog(request, *, name, summary, content):
 			raise APIValueError('summary', 'summary cannot be empty')
 		if not content or not content.strip():
 			raise APIValueError('content', 'content cannot be empty')
-		blogs = Blog(user_id = request.__user__.id, user_name = request.__user__.name,
+		blog = Blog(user_id = request.__user__.id, user_name = request.__user__.name,
 			user_image = request.__user__.image, name = name.strip(), summary = summary.strip(), content = content.strip())
-		await blogs.save()
-		return blogs
+		await blog.save()
+		return blog
 
 @get('/manage/blogs/create')
 def manage_create_blog():
@@ -177,6 +177,16 @@ def manage_create_blog():
 	'id':'',
 	'action':'/api/blogs'
 	}
+
+def get_page_index(page_str):
+	p=1
+	try:
+		p = int(page_str)
+	except ValueError as e:
+		pass
+	if p < 1:
+		p = 1
+	return p
 
 @get('/api/blogs')
 async def api_blogs(*, page='1'):
@@ -187,3 +197,25 @@ async def api_blogs(*, page='1'):
 			return dict(page=p, blogs=())
 		blogs = await Blog.findAll(orderBy='created_at desc', limit=(p.offset, p.limit))
 		return dict(page=p, blogs=blogs)
+
+
+@get('/manage/blogs')
+def manage_blogs(*, page=1):
+	return {
+	'__template__':'manage_blogs.html',
+	'page_index': get_page_index(page)
+	}
+
+
+@get('/blog/{id}')
+async def get_blog(id):
+		blog = await Blog.find(id)
+		comments = await Comment.findAll('blog_id=?', [id], orderBy='created_at desc')
+		for c in comments:
+			c.html_content = text2html(c.content)
+		blog.html_content = markdown2.markdown(blog.content)
+		return{
+		"__template__": 'blog.html',
+		'blog':blog,
+		'comments': comments
+		}
