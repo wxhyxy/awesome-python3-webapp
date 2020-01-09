@@ -219,3 +219,40 @@ async def get_blog(id):
 		'blog':blog,
 		'comments': comments
 		}
+
+@get('/manage/blogs/edit')
+def manage_edit_blog(*, id):
+	return {
+		'__template__': 'manage_blog_edit.html',
+		'id':id,
+		'action':'/api/blogs/%s'%id
+	}
+
+@get('/manage/users')
+def manage_users(*, page='1'):
+	return {
+		'__template__': 'manage_users.html',
+		'page_index': get_page_index(page)
+	}
+
+
+@get('/api/comments')
+async def api_comments(*, page='1'):
+		page_index = get_page_index(page)
+		unm = await Comment.findNumber('count(id)')
+		p = Page(num, page_index)
+		if num == 0:
+			return dict(page=p, comments=())
+		comments = await Comment.findAll(orderBy='created_at desc', limit=(p.offset, p.limit))
+		return dict(page=p, comments = comments)
+
+@post('/api/blogs/{id}/comments')
+async def api_create_comment(id, request, *, content):
+	user = request.__user__
+	if user is None:
+		raise APIPermissionErroor('please signin first')
+	if not content or not content.strip():
+		raise APIValueError('content')
+
+
+
