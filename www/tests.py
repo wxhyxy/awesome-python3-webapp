@@ -7,7 +7,7 @@ import aiomysql, asyncio
 from coroweb import get, post
 from apis import *
 from config import configs
-
+import markdown2
 # async def test(loop):
 # 		print('start...')
 # 		await orm.create_pool(loop, user='root',password='mysql',db='awesome')
@@ -210,12 +210,13 @@ def manage_blogs(*, page=1):
 @get('/blog/{id}')
 async def get_blog(id):
 		blog = await Blog.find(id)
+		print(blog)
 		comments = await Comment.findAll('blog_id=?', [id], orderBy='created_at desc')
 		for c in comments:
 			c.html_content = text2html(c.content)
 		blog.html_content = markdown2.markdown(blog.content)
 		return{
-		"__template__": 'blog.html',
+		"__template__": 'blogs.html',
 		'blog':blog,
 		'comments': comments
 		}
@@ -239,12 +240,30 @@ def manage_users(*, page='1'):
 @get('/api/comments')
 async def api_comments(*, page='1'):
 		page_index = get_page_index(page)
-		unm = await Comment.findNumber('count(id)')
+		num = await Comment.findNumber('count(id)')
 		p = Page(num, page_index)
 		if num == 0:
 			return dict(page=p, comments=())
 		comments = await Comment.findAll(orderBy='created_at desc', limit=(p.offset, p.limit))
 		return dict(page=p, comments = comments)
+
+@post('/api/blogs/{id}')
+async def api_update_blog(id, request, *, name, summary, content):
+		check_admin(request)
+		blog = await Blog.find(id)
+		print('!'*88)
+		print(blog)
+		if not name or not name.strip():
+			raise APIValueError('name', 'name is not empty')
+		if not summary or not summary.strip():
+			raise APIValueError('summary', 'summary is not empty')
+		if not content or not content.strip():
+			raise APIValueError('content', 'content is not empty')
+		blog.name = name.strip()
+		blog.summary = summary.strip()
+		blog.content = content.strip()
+		await content.update()
+		return blog
 
 @post('/api/blogs/{id}/comments')
 async def api_create_comment(id, request, *, content):
@@ -253,6 +272,22 @@ async def api_create_comment(id, request, *, content):
 		raise APIPermissionErroor('please signin first')
 	if not content or not content.strip():
 		raise APIValueError('content')
+	blog = await Blog.find(id)
+	print(blog)
+	if blog is None:
+		raise APIResourcelNotFoundError('blog')
+	comment = Comment(blog_id=blog.id, user_id = user.id, user_name = user.name, user_image = user.image, content=content.strip())
+	print(comment)
+	comment.save()
+	return comment
 
+@post('/api/comments/{id}/delete')
+async def api_delete_comments(id, request):
+		check_admin(request)
+		c = await Comment.find(id)
+		if c is None:
+			raise APIResourcelNotFoundError('comment')
+		await c.remove()
+		return dict(id=id)
 
 

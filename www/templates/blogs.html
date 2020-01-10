@@ -1,4 +1,4 @@
-{% extends '__base__.html' %}
+{% extends 'base.html' %}
 
 {% block title %}{{ blog.name }}{% endblock %}
 
@@ -16,9 +16,10 @@ $(function () {
             return $form.showFormError('请输入评论内容！');
         }
         $form.postJSON(comment_url, { content: content }, function (err, result) {
-            if (err) {
+           if (err) {
                 return $form.showFormError(err);
             }
+            alert(comment_url)
             refresh();
         });
     });

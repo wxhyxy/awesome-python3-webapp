@@ -15,6 +15,7 @@ function initVM(data) {
 		},
 		methods:{
 			edit_blog: function(blog){
+				alert(blog.id)
 				location.assign('/manage/blogs/edit?id='+ blog.id)
 			},
 			delete_blog: function(blog){
